@@ -1,18 +1,20 @@
 setuptools
-hiredis
+hiredis~=2.0.0
 uvloop;implementation_name=="cpython"
 pytest
 pytest-benchmark>=3.1.1
 
-# aioredis
-# aioredis==1.1.0
--e git+https://github.com/aio-libs/aioredis#egg=aioredis
+# aioredis 1.x
+aioredis==1.3.0
 
 # aredis
-aredis==1.1.1
+aredis~=1.1.8
+
+# coredis
+coredis>=3.0.1
 
 # asyncio_redis
-asyncio_redis==0.14.3
+asyncio_redis>=0.16.0
 
 # redis-py
-redis==2.10.6
+redis>=4.2.0rc3

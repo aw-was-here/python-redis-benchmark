@@ -20,7 +20,7 @@ def benchmark_get(benchmark, redispy, key_get):
     benchmark(execute, redispy.get, key_get)
 
 
-@pytest.mark.benchmark(group='redispy-hgetall')
+@pytest.mark.benchmark(group="redispy-hgetall")
 def benchmark_hgetall(benchmark, redispy, key_hgetall):
     benchmark(execute, redispy.hgetall, key_hgetall)
 
