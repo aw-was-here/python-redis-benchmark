@@ -489,6 +489,17 @@ def key_hgetall(data_size, r):
 
     return key
 
+@pytest.fixture(scope="session")
+def key_smembers(data_size, r):
+    key = "smember:size:{:05}".format(data_size)
+    p = r.pipeline()
+
+    for i in range(data_size):
+        val = "val:{:05}".format(i)
+        p.sadd(key, val)
+    p.execute()
+    return key
+
 
 @pytest.fixture(scope="session")
 def key_zrange(data_size, r):

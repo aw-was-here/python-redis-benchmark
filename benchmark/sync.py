@@ -30,6 +30,11 @@ def benchmark_lrange(benchmark, redispy, key_lrange):
     benchmark(execute, redispy.lrange, key_lrange, 0, -1)
 
 
+@pytest.mark.benchmark(group="redispy-smembers")
+def benchmark_smembers(benchmark, redispy, key_smembers):
+    benchmark(execute, redispy.smembers, key_smembers)
+
+
 @pytest.mark.benchmark(group="redispy-zrange")
 def benchmark_zrange(benchmark, redispy, key_zrange):
     benchmark(execute, redispy.zrange, key_zrange, 0, -1, withscores=True)
