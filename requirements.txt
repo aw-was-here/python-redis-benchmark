@@ -17,4 +17,4 @@ coredis>=3.0.1
 asyncio_redis>=0.16.0
 
 # redis-py
-redis>=4.2.0rc3
+redis>=4.2.0
