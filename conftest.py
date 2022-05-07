@@ -17,14 +17,15 @@ from unittest import mock
 import aioredis
 import aredis
 import asyncio_redis
-import coredis
-import coredis.connection
 from aioredis import parser as aioredis_parser
 from aioredis.parser import PyReader
 from aredis import connection as aredis_conn
 from asyncio_redis.protocol import HiRedisProtocol, RedisProtocol
 from hiredis import Reader as HiReader
 from redis.connection import Encoder, HiredisParser, PythonParser
+
+import coredis
+import coredis.parsers
 
 
 def pytest_addoption(parser):
@@ -118,7 +119,7 @@ class AsyncRedisPyHiredisParserReader(AsyncRedisPyParserReader):
 
 
 class CoredisPythonParserReader:
-    Parser = coredis.connection.PythonParser
+    Parser = coredis.parsers.PythonParser
 
     def __init__(self, encoding=None):
         self._sock = FakeSocket()
@@ -141,7 +142,7 @@ class CoredisPythonParserReader:
 
 
 class CoredisHiredisParserReader(CoredisPythonParserReader):
-    Parser = coredis.connection.HiredisParser
+    Parser = coredis.parsers.HiredisParser
 
 
 @pytest.fixture(
@@ -235,7 +236,7 @@ async def coredis_py_start(host, port):
     client = coredis.Redis.from_url(
         "redis://{}:{}".format(host, port),
         max_connections=2,
-        parser_class=coredis.connection.PythonParser,
+        parser_class=coredis.parsers.PythonParser,
     )
     await client.ping()
 
@@ -256,7 +257,7 @@ async def coredis_py_resp3_start(host, port):
         "redis://{}:{}".format(host, port),
         protocol_version=3,
         max_connections=2,
-        parser_class=coredis.connection.PythonParser,
+        parser_class=coredis.parsers.PythonParser,
     )
     await client.ping()
 
