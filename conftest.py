@@ -121,7 +121,7 @@ class AsyncRedisPyHiredisParserReader(AsyncRedisPyParserReader):
 class CoredisPythonParserReader:
     Parser = coredis.parsers.PythonParser
 
-    def __init__(self, encoding=None):
+    def __init__(self, encoding="utf-8"):
         self._sock = FakeSocket()
         self._parser = self.Parser(2**17)
         self._parser.on_connect(
