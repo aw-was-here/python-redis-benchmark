@@ -25,7 +25,7 @@ from hiredis import Reader as HiReader
 from redis.connection import Encoder, HiredisParser, PythonParser
 
 import coredis
-import coredis.parsers
+import coredis.parser
 
 
 def pytest_addoption(parser):
@@ -119,11 +119,11 @@ class AsyncRedisPyHiredisParserReader(AsyncRedisPyParserReader):
 
 
 class CoredisPythonParserReader:
-    Parser = coredis.parsers.PythonParser
+    Parser = coredis.parser.Parser
 
     def __init__(self, encoding="utf-8"):
         self._sock = FakeSocket()
-        self._parser = self.Parser(2**17)
+        self._parser = self.Parser()
         self._parser.on_connect(
             mock.Mock(
                 _sock=self._sock,
@@ -133,16 +133,10 @@ class CoredisPythonParserReader:
         )
 
     def feed(self, data):
-        if not self._sock.tell():
-            self._sock.write(data)
-        self._sock.seek(0)
+        self._parser.unpacker.feed(data)
 
     def gets(self):
-        return self._parser.read_response()
-
-
-class CoredisHiredisParserReader(CoredisPythonParserReader):
-    Parser = coredis.parsers.HiredisParser
+        return self._parser.get_response()
 
 
 @pytest.fixture(
@@ -177,11 +171,6 @@ def reader_encoding(request):
             CoredisPythonParserReader,
             marks=[pytest.mark.pyreader, pytest.mark.coredis],
             id="coredis[py]",
-        ),
-        pytest.param(
-            CoredisHiredisParserReader,
-            marks=[pytest.mark.hiredis, pytest.mark.coredis],
-            id="coredis[hi]",
         ),
         pytest.param(
             AsyncRedisPyParserReader,
@@ -222,30 +211,9 @@ async def aredis_py_start(host, port):
     return client
 
 
-async def coredis_start(host, port):
-    client = coredis.Redis.from_url(
-        "redis://{}:{}".format(host, port),
-        max_connections=2,
-    )
-    await client.ping()
-
-    return client
-
-
 async def coredis_py_start(host, port):
     client = coredis.Redis.from_url(
-        "redis://{}:{}".format(host, port),
-        max_connections=2,
-        parser_class=coredis.parsers.PythonParser,
-    )
-    await client.ping()
-
-    return client
-
-
-async def coredis_resp3_start(host, port):
-    client = coredis.Redis.from_url(
-        "redis://{}:{}".format(host, port), max_connections=2, protocol_version=3
+        "redis://{}:{}".format(host, port), max_connections=2, protocol_version=2
     )
     await client.ping()
 
@@ -257,7 +225,6 @@ async def coredis_py_resp3_start(host, port):
         "redis://{}:{}".format(host, port),
         protocol_version=3,
         max_connections=2,
-        parser_class=coredis.parsers.PythonParser,
     )
     await client.ping()
 
@@ -345,19 +312,9 @@ async def redis_py_async_py_start(host, port):
             id="aredis[py]-------",
         ),
         pytest.param(
-            (coredis_start, coredis_stop),
-            marks=[pytest.mark.hiredis, pytest.mark.coredis],
-            id="coredis[hi]-------",
-        ),
-        pytest.param(
             (coredis_py_start, coredis_stop),
             marks=[pytest.mark.pyreader, pytest.mark.coredis],
             id="coredis[py]-------",
-        ),
-        pytest.param(
-            (coredis_resp3_start, coredis_stop),
-            marks=[pytest.mark.hiredis, pytest.mark.coredis],
-            id="coredis[hi][resp3]-------",
         ),
         pytest.param(
             (coredis_py_resp3_start, coredis_stop),
@@ -489,6 +446,7 @@ def key_hgetall(data_size, r):
     p.execute()
 
     return key
+
 
 @pytest.fixture(scope="session")
 def key_smembers(data_size, r):

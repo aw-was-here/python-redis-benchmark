@@ -39,9 +39,11 @@ def benchmark_hgetall(benchmark, async_redis, loop, key_hgetall):
 def benchmark_lrange(benchmark, async_redis, loop, key_lrange):
     benchmark(execute, loop, async_redis.lrange, key_lrange, 0, -1)
 
+
 @pytest.mark.benchmark(group="async-smembers")
 def benchmark_smembers(benchmark, async_redis, loop, key_smembers):
     benchmark(execute, loop, async_redis.smembers, key_smembers)
+
 
 @pytest.mark.benchmark(group="async-zrange")
 def benchmark_zrange(benchmark, async_redis, loop, key_zrange):
