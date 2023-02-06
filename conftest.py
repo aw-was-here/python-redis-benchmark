@@ -133,10 +133,10 @@ class CoredisPythonParserReader:
         )
 
     def feed(self, data):
-        self._parser.unpacker.feed(data)
+        self._parser.feed(data)
 
     def gets(self):
-        return self._parser.get_response()
+        return self._parser.get_response(False)
 
 
 @pytest.fixture(
