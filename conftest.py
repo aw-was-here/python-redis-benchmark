@@ -14,15 +14,11 @@ else:
 
 from unittest import mock
 
-import aioredis
-import aredis
 import asyncio_redis
-from aioredis import parser as aioredis_parser
-from aioredis.parser import PyReader
-from aredis import connection as aredis_conn
+import redis.asyncio.connection
 from asyncio_redis.protocol import HiRedisProtocol, RedisProtocol
 from hiredis import Reader as HiReader
-from redis.connection import Encoder, HiredisParser, PythonParser
+from redis._parsers import Encoder,  _HiredisParser, _RESP3Parser
 
 import coredis
 import coredis.parser
@@ -44,12 +40,12 @@ def pytest_addoption(parser):
     scope="session",
     params=[
         pytest.param(
-            HiredisParser,
+             _HiredisParser,
             marks=[pytest.mark.hiredis, pytest.mark.redispy],
             id="redis-py[hi]",
         ),
         pytest.param(
-            PythonParser,
+            _RESP3Parser,
             marks=[pytest.mark.pyreader, pytest.mark.redispy],
             id="redis-py[py]",
         ),
@@ -73,7 +69,7 @@ class FakeSocket(io.BytesIO):
 
 
 class PythonParserReader:
-    Parser = PythonParser
+    Parser = _RESP3Parser
 
     def __init__(self, encoding=None):
         self._sock = FakeSocket()
@@ -91,11 +87,11 @@ class PythonParserReader:
 
 
 class HiredisParserReader(PythonParserReader):
-    Parser = HiredisParser
+    Parser =  _HiredisParser
 
 
 class AsyncRedisPyParserReader:
-    Parser = redis.asyncio.connection.PythonParser
+    Parser = redis.asyncio.connection._AsyncRESP3Parser
 
     def __init__(self, encoding=None):
         self._sock = FakeSocket()
@@ -115,7 +111,7 @@ class AsyncRedisPyParserReader:
 
 
 class AsyncRedisPyHiredisParserReader(AsyncRedisPyParserReader):
-    Parser = redis.asyncio.connection.HiredisParser
+    Parser = redis.asyncio.connection._AsyncHiredisParser
 
 
 class CoredisPythonParserReader:
@@ -153,11 +149,6 @@ def reader_encoding(request):
     params=[
         pytest.param(HiReader, marks=pytest.mark.hiredis, id="hiredis"),
         pytest.param(
-            PyReader,
-            marks=[pytest.mark.pyreader, pytest.mark.aioredis],
-            id="aioredis[py]",
-        ),
-        pytest.param(
             PythonParserReader,
             marks=[pytest.mark.pyreader, pytest.mark.redispy],
             id="redispy[py]",
@@ -191,26 +182,6 @@ def reader(request, reader_encoding):
     return request.param()
 
 
-async def aredis_start(host, port):
-    client = aredis.StrictRedis.from_url(
-        "redis://{}:{}".format(host, port), max_connections=2
-    )
-    await client.ping()
-
-    return client
-
-
-async def aredis_py_start(host, port):
-    client = aredis.StrictRedis.from_url(
-        "redis://{}:{}".format(host, port),
-        max_connections=2,
-        parser_class=aredis_conn.PythonParser,
-    )
-    await client.ping()
-
-    return client
-
-
 async def coredis_py_start(host, port):
     client = coredis.Redis.from_url(
         "redis://{}:{}".format(host, port), max_connections=2, protocol_version=2
@@ -233,27 +204,6 @@ async def coredis_py_resp3_start(host, port):
 
 async def coredis_stop(client):
     client.connection_pool.disconnect()
-
-
-async def aioredis_start(host, port):
-    client = await aioredis.create_redis_pool((host, port), maxsize=2)
-    await client.ping()
-
-    return client
-
-
-async def aioredis_py_start(host, port):
-    client = await aioredis.create_redis_pool(
-        (host, port), maxsize=2, parser=aioredis_parser.PyReader
-    )
-    await client.ping()
-
-    return client
-
-
-async def aioredis_stop(client):
-    client.close()
-    await client.wait_closed()
 
 
 async def asyncio_redis_start(host, port):
@@ -282,7 +232,7 @@ async def redis_py_async_start(host, port):
     client = await redis.asyncio.Redis.from_url(
         "redis://{}:{}".format(host, port),
         max_connections=2,
-        parser_class=redis.asyncio.connection.PythonParser,
+        parser_class=redis.asyncio.connection._AsyncRESP3Parser,
     )
     await client.ping()
 
@@ -302,16 +252,6 @@ async def redis_py_async_py_start(host, port):
 @pytest.fixture(
     params=[
         pytest.param(
-            (aredis_start, None),
-            marks=[pytest.mark.hiredis, pytest.mark.aredis],
-            id="aredis[hi]-------",
-        ),
-        pytest.param(
-            (aredis_py_start, None),
-            marks=[pytest.mark.pyreader, pytest.mark.aredis],
-            id="aredis[py]-------",
-        ),
-        pytest.param(
             (coredis_py_start, coredis_stop),
             marks=[pytest.mark.pyreader, pytest.mark.coredis],
             id="coredis[py]-------",
@@ -320,16 +260,6 @@ async def redis_py_async_py_start(host, port):
             (coredis_py_resp3_start, coredis_stop),
             marks=[pytest.mark.pyreader, pytest.mark.coredis],
             id="coredis[py][resp3]-------",
-        ),
-        pytest.param(
-            (aioredis_start, aioredis_stop),
-            marks=[pytest.mark.hiredis, pytest.mark.aioredis],
-            id="aioredis[hi]-----",
-        ),
-        pytest.param(
-            (aioredis_py_start, aioredis_stop),
-            marks=[pytest.mark.pyreader, pytest.mark.aioredis],
-            id="aioredis[py]-----",
         ),
         pytest.param(
             (asyncio_redis_start, asyncio_redis_stop),
@@ -393,15 +323,6 @@ def loop(request):
     loop.run_forever()
     loop.close()
 
-
-@pytest.fixture
-def _aioredis(loop):
-    r = loop.run_until_complete(aioredis.create_redis(("localhost", 6379)))
-    try:
-        yield r
-    finally:
-        r.close()
-        loop.run_until_complete(r.wait_closed())
 
 
 MIN_SIZE = 10
